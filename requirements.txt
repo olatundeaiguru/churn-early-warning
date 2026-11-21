@@ -1,0 +1,25 @@
+# Python 3.13 (tested with 3.13.15 on Windows 11)
+# Install: python -m pip install -r requirements.txt
+
+# Data
+numpy==2.5.5
+pandas==3.1.1
+
+# Modelling and explanations
+scikit-learn==1.9.1
+lightgbm==4.7.0
+shap==0.54.1
+
+# Charts
+matplotlib==3.11.2
+
+# Demo app
+streamlit==1.67.0
+
+# Notebooks
+jupyterlab==4.6.6
+ipykernel==7.4.0
+
+# Testing and code quality
+pytest==9.2.0
+ruff==0.17.6
