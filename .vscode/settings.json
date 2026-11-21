@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.ipynb_checkpoints": true,
+        "**/__pycache__": true,
+        "**/*.egg-info": true
+    }
+}
