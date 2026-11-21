@@ -97,3 +97,38 @@ Each decision records: what we decided, why, the evidence, other options we cons
 - **Why this rule:** It was chosen **before** looking at the data, so we could not pick a rule that just happens to look good.
 - **Alternatives:** Only logistic regression, as in the brief. We kept it, and added the rule and random calling for a fairer picture.
 - **Revisit:** Stage 8 (Baseline).
+
+---
+
+## A6: Split the data before EDA
+
+- **Date:** 2026-11-21
+- **Stage:** 3 (done before EDA, instead of in Stage 6)
+- **Decision:** Hold out the test set **before** EDA. All EDA, cleaning decisions and modelling use the training set only.
+- **Settings:**
+  - 80% train / 20% test
+  - Stratified on `Churn`
+  - `random_state=42`
+  - Saved as CSV in `data/interim/` (not committed to git)
+- **How:** `python -m churn.split` (code in `src/churn/split.py`). The script refuses to overwrite existing files, so the test set cannot change by accident.
+- **Result (actual run):**
+
+  | Set | Rows | Churn rate |
+  |---|---|---|
+  | Raw | 51,047 | 28.82% |
+  | Train | 40,837 | 28.82% |
+  | Test | 10,210 | 28.81% |
+
+- **Why:**
+  - What we learn in EDA shapes our cleaning and feature choices.
+  - If the test customers were included, that knowledge would leak into our decisions ("human leakage").
+  - Splitting first keeps the test set truly untouched, as the brief requires.
+- **Why these settings:**
+  - Stratified, so both sets keep the same churn rate.
+  - 20% gives about 2,940 churners in the test set, enough for a reliable final check.
+  - The seed is fixed, so the split can be reproduced.
+- **Alternatives:**
+  - EDA on all the data, splitting in Stage 6. Simpler and common, but with a small leakage risk. Rejected.
+  - A time-based split. Better for real deployment, but **not possible**: the data has no dates.
+- **Limitation:** A random split cannot show how the model handles behaviour changing over time. The test score may be a little optimistic compared with real use on future customers.
+- **Revisit if:** the dataset changes, or a dataset with dates becomes available.

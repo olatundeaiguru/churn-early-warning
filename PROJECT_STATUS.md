@@ -4,12 +4,12 @@ _Last updated: 2026-11-21_
 
 ## Current stage
 
-**Stage 2: Understand and load the data (complete).**
-Next stage: **Stage 3: Exploratory Data Analysis** (not started).
+**Stage 3: Exploratory Data Analysis (in progress).**
+Setup done: test set held out (decision A6). EDA itself not started.
 
 ## Next single step
 
-Walk through the code in `notebooks/01_data_inspection.ipynb` section by section, so the owner understands it. Then start Stage 3.
+Create `notebooks/02_eda.ipynb` and explore the **training set only** (`load_train_data()`).
 
 ## Problem summary
 
@@ -26,6 +26,7 @@ Walk through the code in `notebooks/01_data_inspection.ipynb` section by section
 | Most costly error | Missing a churner (false negative). A wasted call (false positive) costs less. |
 | Main metric | Recall and precision within the **top 20%** of risk scores. ROC-AUC is reported too. |
 | Data | `data/raw/cell2celltrain.csv` only. 51,047 rows and 58 columns (confirmed in Stage 2). |
+| Split | Train 40,837 rows (28.82% churn), test 10,210 rows (28.81% churn), in `data/interim/`. Test set locked until Stage 12. |
 | Timeline | 3 weeks. EDA report at the end of week 1, Streamlit demo at the end of week 3. |
 | Project type | Prototype / portfolio scenario. Not a production system. |
 
@@ -49,6 +50,7 @@ Walk through the code in `notebooks/01_data_inspection.ipynb` section by section
 | A3 | Success rule: within the 20% call budget, the final model must catch clearly more churners than the logistic regression baseline and far more than random calling. The exact target number is set right after the baseline run, before looking at stronger models. | Rule decided, number pending |
 | A4 | Build the model **without** `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `MaritalStatus`, `Occupation` and `IncomeGroup` first. Keep them for a fairness check. Then build **with** them, compare on cross-validation (never the test set), and choose. `CreditRating` and `PrizmCode` stay in; `PrizmCode` gets a fairness check. | Decided |
 | A5 | Baselines: (1) random calling, (2) rule "call the 20% with the most `CustomerCareCalls`", (3) logistic regression. | Decided |
+| A6 | Split before EDA: 80/20, stratified on `Churn`, `random_state=42`. EDA and modelling use the training set only. | Done |
 
 ## Stage 2 findings (data inspection)
 
@@ -94,3 +96,10 @@ Source: `notebooks/01_data_inspection.ipynb`.
 - Stage 1: problem defined, decisions A1 to A5 recorded in `docs/decisions.md`.
 - Environment: `.venv` (Python 3.13.15) with pinned packages in `requirements.txt`.
 - Stage 2: data inspected in `notebooks/01_data_inspection.ipynb`. Findings above.
+- Stage 3 setup:
+  - `pyproject.toml` with the package installed in editable mode (`pip install -e .`).
+  - `src/churn/` package: `config.py` (paths and settings), `data.py` (loading and checks), `split.py` (train/test split).
+  - 22 tests passing (`tests/test_data.py`, `tests/test_split.py`).
+  - Split run with `python -m churn.split` (decision A6).
+  - Notebook 01 uses the shared loader.
+  - Learning comments added to all code (to be cleaned up at the end of the project).
