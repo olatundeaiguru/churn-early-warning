@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "churn-early-warning"
+version = "0.1.0"
+description = "Churn early-warning model for a telecom retention team (Cell2Cell data)."
+readme = "README.md"
+requires-python = ">=3.13"
+# Dependencies are pinned in requirements.txt, the single source of truth.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/F: errors and pyflakes, I: import order, B: common bugs, UP: modern syntax
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
