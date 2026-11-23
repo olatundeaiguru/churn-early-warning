@@ -181,3 +181,6 @@ cython_debug/
 .cursorindexingignore
 # Project data (never commit datasets)
 data/
+
+# Personal learning notes (kept local)
+docs/learning/
