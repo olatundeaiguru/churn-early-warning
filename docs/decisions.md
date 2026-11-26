@@ -191,3 +191,41 @@ Each decision records: what we decided, why, the evidence, other options we cons
 - **Alternatives rejected:** including the retention columns (leakage and feedback-loop risk); keeping lifestyle columns in from the start (inconsistent with A4); keeping redundant columns (unstable logistic regression); 730 raw areas (noise); dropping location (loses a real signal).
 - **Tests:** `tests/test_features.py` (14 tests).
 - **Revisit:** the "with personal + lifestyle data" comparison after the first model (A4). Retention columns if their timing is ever confirmed.
+
+---
+
+## A9: Preprocessing pipeline
+
+- **Date:** 2026-11-26
+- **Stage:** 7 (Build preprocessing)
+- **Decision:** one scikit-learn `Pipeline` in `src/churn/pipeline.py`:
+
+  ```
+  raw data -> clean_data -> add_features -> ColumnTransformer -> (model)
+  ```
+
+| Part | Steps | Learns from data? |
+|---|---|---|
+| Cleaning (A7) | `clean_data` | No (fixed rules) |
+| New features (A8) | `add_features` | No (fixed rules) |
+| 29 numeric features | Fill gaps with the **training median** + "was missing" flag columns; scale **only** for logistic regression | Yes: medians, scaling |
+| 5 categorical features | Fill gaps with "Missing"; one-hot; categories with **< 100 training customers** and unseen categories share one "infrequent" column | Yes: category lists |
+| `CreditRating` | Rank 0 (1-Highest) to 6 (7-Lowest); unexpected value → training median; scale only for logistic regression | Yes: median, scaling |
+| Other columns | Dropped (`remainder="drop"`) | No |
+
+- **Result on the training set:** 35 features → **93 columns** (29 numeric + 12 "was missing" flags + 51 one-hot + 1 rank). No missing values. No warnings.
+- **Why:**
+  - **No leakage:** everything that learns is inside the pipeline, so it learns only from the data it is fitted on (training data, or each training fold in cross-validation).
+  - **Same steps everywhere:** test data and the Streamlit app go through the exact same fitted steps.
+  - **One object to save:** the full pipeline (preprocessing + model) is saved, not just the model.
+- **Why each choice:**
+  - **Median, not mean:** EDA showed skewed columns (a few huge values pull the mean up).
+  - **"Was missing" flags:** EDA showed missing usage data is a strong churn signal (46-57% churn).
+  - **Scale only for logistic regression:** tree models do not need it (project rules: do not scale automatically).
+  - **Rare/unseen categories grouped:** avoids learning from tiny groups and stops the app crashing on a new city.
+  - **`CreditRating` as ranks:** keeps the natural order in one column.
+  - **Pandas output** (`set_output`): readable column names, needed for SHAP explanations later.
+- **Alternatives rejected:** mean imputation without flags (loses the missing signal); always scaling (pointless for trees); one column per city (noise, crashes on new cities); `CreditRating` as 7 categories (loses order).
+- **Deferred:** capping extreme values (e.g. `UniqueSubs` = 196 in the test set). Revisit if logistic regression struggles in Stage 8.
+- **Tests:** `tests/test_pipeline.py` (15 tests), incl. "gaps filled with the TRAINING median", "transforming new data does not re-learn", "unseen city does not crash", "excluded columns never come out".
+- **Revisit if:** the baseline shows problems with extreme values, or a model needs a different encoding.

@@ -4,12 +4,12 @@ _Last updated: 2026-11-26_
 
 ## Current stage
 
-**Stage 5: Separate features (X) and target (y) (complete).**
-Next stage: **Stage 6: Split the data**. Already done early (decision A6), so the next real work is **Stage 7: Build preprocessing (pipeline)**.
+**Stage 7: Build preprocessing (complete).**
+Stage 6 (split) was done early (A6). Next stage: **Stage 8: Establish a baseline** (not started).
 
 ## Next single step
 
-Start Stage 7: build the scikit-learn pipeline (cleaning → features → fill gaps + "was missing" flags → encode → scale where needed), fitted on training data only.
+Start Stage 8: run the 3 baselines (random calling, customer-care rule, logistic regression) with cross-validation on the training set, then set the success target number (A3).
 
 ## Problem summary
 
@@ -53,6 +53,7 @@ Start Stage 7: build the scikit-learn pipeline (cleaning → features → fill g
 | A6 | Split before EDA: 80/20, stratified on `Churn`, `random_state=42`. EDA and modelling use the training set only. | Done |
 | A7 | Rule-based cleaning (`src/churn/cleaning.py`), run as the first pipeline step: negatives → missing, `HandsetPrice` → number, combined `CellphoneUserStatus`, `AgeHH1`/`IncomeGroup` 0 → missing. | Done |
 | A8 | Feature set: **35 features** (29 numeric, 5 categorical, 1 ordinal) in `src/churn/features.py`. Excluded: retention columns (leakage risk), 6 personal + 10 lifestyle columns (for the later comparison, A4), `DroppedBlockedCalls` and `HandsetModels` (redundant), `ServiceArea` (replaced by `CityCode`). New: `CityCode`, `ChangedPhone`. | Done |
+| A9 | Pipeline (`src/churn/pipeline.py`): clean → add features → median fill + "was missing" flags → one-hot (rare/unseen → "infrequent") → `CreditRating` ranks → scale only for logistic regression. 35 features → 93 columns. | Done |
 
 ## Stage 2 findings (data inspection)
 
@@ -128,4 +129,6 @@ Source: `notebooks/02_eda.ipynb`. Full detail in the notebook's C4 and "EDA summ
 - `docs/data_dictionary.md`: all 58 columns (5 confirmed by sources, the rest inferred and marked).
 - Stage 4: `src/churn/cleaning.py` with 4 rules (decision A7) and 15 tests. 37 tests passing in total.
 - Stage 5: `src/churn/features.py` (feature lists, `add_features`, `split_features_target`, decision A8) and 14 tests. 51 tests passing in total.
+- Stage 7: `src/churn/pipeline.py` (decision A9) and 15 tests. 66 tests passing in total. `encode_target()` added to `features.py`.
+- Branches: `feat/stage-4-cleaning` renamed to `feat/stage-4-5-cleaning-features` (Stage 5 was committed there). Stage 7 on `feat/stage-7-pipeline`.
 - `DAYS_PER_MONTH` changed from 30.4 to 365.25 / 12. 198 customers moved category in the EDA C3 table; conclusions unchanged, numbers updated.
