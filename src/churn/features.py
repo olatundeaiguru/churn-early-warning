@@ -205,6 +205,19 @@ def split_features_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
         raise ValueError(f"Cannot split X and y, missing columns: {missing_columns}")
 
     features = df[list(MODEL_FEATURES)]
-    # Yes -> 1, No -> 0. Labels were already checked by churn.data.
-    target = df[TARGET_COLUMN].eq(POSITIVE_LABEL).astype(int)
-    return features, target
+    return features, encode_target(df[TARGET_COLUMN])
+
+
+# Turn the Churn labels into numbers: "Yes" -> 1, "No" -> 0.
+# Shared by this module and the pipeline, so the rule is written once.
+def encode_target(churn_labels: pd.Series) -> pd.Series:
+    """Convert Churn labels to 1 (churned) and 0 (stayed).
+
+    Args:
+        churn_labels: The Churn column ("Yes"/"No"), already checked by
+            churn.data.validate_dataset.
+
+    Returns:
+        1 where the label is "Yes", else 0.
+    """
+    return churn_labels.eq(POSITIVE_LABEL).astype(int)
