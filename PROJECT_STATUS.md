@@ -1,15 +1,15 @@
 # Project Status: Churn Early-Warning System
 
-_Last updated: 2026-11-21_
+_Last updated: 2026-11-26_
 
 ## Current stage
 
-**Stage 4: Initial cleaning (complete).**
-Stage 3 (EDA) complete. Next stage: **Stage 5: Separate features (X) and target (y)** (not started).
+**Stage 5: Separate features (X) and target (y) (complete).**
+Next stage: **Stage 6: Split the data**. Already done early (decision A6), so the next real work is **Stage 7: Build preprocessing (pipeline)**.
 
 ## Next single step
 
-Start Stage 5: decide the feature set, including the open questions (retention columns A2, lifestyle columns, overlapping columns, city code).
+Start Stage 7: build the scikit-learn pipeline (cleaning → features → fill gaps + "was missing" flags → encode → scale where needed), fitted on training data only.
 
 ## Problem summary
 
@@ -46,12 +46,13 @@ Start Stage 5: decide the feature set, including the open questions (retention c
 | # | Decision | Status |
 |---|---|---|
 | A1 | Use the `Churn` label as given: churn 31 to 60 days after the snapshot. | Decided |
-| A2 | `RetentionCalls`, `RetentionOffersAccepted` and `MadeCallToRetentionTeam` are possible leakage. Check them in EDA. If we cannot show they were known at snapshot time, leave them out. | Decide in Stage 5 |
+| A2 | `RetentionCalls`, `RetentionOffersAccepted` and `MadeCallToRetentionTeam` are possible leakage. Check them in EDA. If we cannot show they were known at snapshot time, leave them out. | Decided in A8: **excluded** |
 | A3 | Success rule: within the 20% call budget, the final model must catch clearly more churners than the logistic regression baseline and far more than random calling. The exact target number is set right after the baseline run, before looking at stronger models. | Rule decided, number pending |
 | A4 | Build the model **without** `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `MaritalStatus`, `Occupation` and `IncomeGroup` first. Keep them for a fairness check. Then build **with** them, compare on cross-validation (never the test set), and choose. `CreditRating` and `PrizmCode` stay in; `PrizmCode` gets a fairness check. | Decided |
 | A5 | Baselines: (1) random calling, (2) rule "call the 20% with the most `CustomerCareCalls`", (3) logistic regression. | Decided |
 | A6 | Split before EDA: 80/20, stratified on `Churn`, `random_state=42`. EDA and modelling use the training set only. | Done |
 | A7 | Rule-based cleaning (`src/churn/cleaning.py`), run as the first pipeline step: negatives → missing, `HandsetPrice` → number, combined `CellphoneUserStatus`, `AgeHH1`/`IncomeGroup` 0 → missing. | Done |
+| A8 | Feature set: **35 features** (29 numeric, 5 categorical, 1 ordinal) in `src/churn/features.py`. Excluded: retention columns (leakage risk), 6 personal + 10 lifestyle columns (for the later comparison, A4), `DroppedBlockedCalls` and `HandsetModels` (redundant), `ServiceArea` (replaced by `CityCode`). New: `CityCode`, `ChangedPhone`. | Done |
 
 ## Stage 2 findings (data inspection)
 
@@ -81,7 +82,7 @@ Source: `notebooks/02_eda.ipynb`. Full detail in the notebook's C4 and "EDA summ
 
 **Business insights (draft for the manager)**
 1. **1-year danger zone:** 11-12 months in service churn 42.5% vs 15.9% at 6-8 months. Same with or without a phone change (timing, likely contract end).
-2. **Long-standing customers on their original phone:** 19+ months, same phone 33.9% vs changed phone 25.7%. Non-web phones 37.2% vs 27.9%.
+2. **Long-standing customers on their original phone:** 19+ months, same phone 33.8% vs changed phone 25.9%. Non-web phones 37.2% vs 27.9%.
 3. **Low or falling usage:** lowest minutes 37.8% vs heaviest 25.0%. Biggest drop in minutes 34.3%. Missing usage data 46-57%.
 4. **Customer care calls are not a churn signal alone:** most calls 24.5% vs almost none 30.5%. Our rule baseline (A5) will probably do worse than random. Kept as decided.
 5. **Churn differs by city:** 22.0% (STL) to 41.7% (SLC) among cities with 100+ customers.
@@ -126,3 +127,5 @@ Source: `notebooks/02_eda.ipynb`. Full detail in the notebook's C4 and "EDA summ
 - Stage 3 EDA: Parts A (data quality, leakage), B (churn by column, charts), C (overlaps, areas, insights).
 - `docs/data_dictionary.md`: all 58 columns (5 confirmed by sources, the rest inferred and marked).
 - Stage 4: `src/churn/cleaning.py` with 4 rules (decision A7) and 15 tests. 37 tests passing in total.
+- Stage 5: `src/churn/features.py` (feature lists, `add_features`, `split_features_target`, decision A8) and 14 tests. 51 tests passing in total.
+- `DAYS_PER_MONTH` changed from 30.4 to 365.25 / 12. 198 customers moved category in the EDA C3 table; conclusions unchanged, numbers updated.

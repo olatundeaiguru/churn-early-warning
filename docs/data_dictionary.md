@@ -117,11 +117,23 @@ All look like **monthly averages** (they have decimals).
 
 ---
 
+## 7. Columns created by the project
+
+| Column | Meaning | Type | Created in | Notes |
+|---|---|---|---|---|
+| `CellphoneUserStatus` | New / NotNew / Unknown mobile user | Text | Cleaning (A7) | Replaces `NewCellphoneUser` and `NotNewCellphoneUser` |
+| `CityCode` | First 3 letters of `ServiceArea`, e.g. `NYC` | Text | Features (A8) | 57 cities in training. Replaces `ServiceArea` in the model |
+| `ChangedPhone` | 1 = phone at least 1 month newer than the account, 0 = same phone since joining | Number (0/1) | Features (A8) | Missing when phone age is unknown |
+
+## Which columns the model uses
+
+See decision **A8** in `docs/decisions.md`: 35 features. Excluded: `CustomerID`, `Churn` (target), the 3 retention columns (leakage risk), 6 personal and 10 lifestyle columns (for the later comparison), `DroppedBlockedCalls` and `HandsetModels` (redundant), `ServiceArea` (replaced by `CityCode`).
+
 ## Open questions
 
-1. **Lifestyle columns** (truck, RV, motorcycle, computer, credit card, travel, mail order): these are also personal data about the customer, but they are not on the A4 list. Do we treat them like A4 (leave out first) or keep them? To decide in Stage 5.
+1. **Lifestyle columns** (truck, RV, motorcycle, computer, credit card, travel, mail order): these are also personal data about the customer, but they are not on the A4 list. **Resolved (A8):** treated like A4, left out of the first model.
 2. **`ReceivedCalls`:** count of calls or minutes? Affects how we describe it to the business, not whether we can use it.
-3. **Retention columns:** were they recorded before the snapshot? Decision A2, Stage 5.
+3. **Retention columns:** were they recorded before the snapshot? Not confirmed. **Resolved (A8):** excluded from the model.
 
 ## Sources
 

@@ -162,3 +162,32 @@ Each decision records: what we decided, why, the evidence, other options we cons
 - **Alternatives rejected:** negatives → 0 (a guess); deleting rows (loses customers); keeping `HandsetPrice` as 16 text categories (loses order); saving `train_clean.csv` (a second copy to keep in sync).
 - **Tests:** `tests/test_cleaning.py` (15 tests).
 - **Revisit if:** new data shows other impossible values, or the meaning of `AgeHH2 = 0` is confirmed.
+
+---
+
+## A8: Feature set (X) and target (y)
+
+- **Date:** 2026-11-26
+- **Stage:** 5 (Separate features and target)
+- **Decision:** the model uses **35 features**, listed by name in `src/churn/features.py`. Every column is either a feature or excluded with a reason. A test fails if a new column appears without a decision.
+- **Target (y):** `Churn`, Yes → 1, No → 0.
+
+| Group | Columns | Decision | Why |
+|---|---|---|---|
+| Features: numeric | 29 (billing, usage, calls, account, phone, `ChangedPhone`) | **Use** | Available at prediction time |
+| Features: categorical | `HandsetRefurbished`, `HandsetWebCapable`, `CellphoneUserStatus`, `PrizmCode`, `CityCode` | **Use** | One-hot encoded in Stage 7 |
+| Features: ordinal | `CreditRating` (1-Highest to 7-Lowest) | **Use** | Has a natural order |
+| Not inputs | `CustomerID`, `Churn` | Exclude | A label and the answer |
+| Leakage risk | `RetentionCalls`, `RetentionOffersAccepted`, `MadeCallToRetentionTeam` | **Exclude** | Timing not confirmed (rule A2). Also: customers who already called the retention team are already known to the team |
+| Personal | `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `IncomeGroup`, `MaritalStatus`, `Occupation` | Exclude first | Decision A4. Used for the fairness check and the later "with personal data" comparison |
+| Lifestyle | `TruckOwner`, `RVOwner`, `OwnsMotorcycle`, `OwnsComputer`, `HasCreditCard`, `NonUSTravel`, `BuysViaMailOrder`, `RespondsToMailOffers`, `OptOutMailings`, `Homeownership` | Exclude first | Personal data about the customer: treated like A4, included in the later comparison |
+| Redundant | `DroppedBlockedCalls`, `HandsetModels` | Exclude | 89% = Dropped + Blocked; 0.91 correlation with `Handsets` (EDA Part C) |
+| Replaced | `ServiceArea` | Replace with `CityCode` | 730 areas, mostly too small; 57 cities (churn 22-42%) |
+
+- **New features** (fixed rules, no learning):
+  - `CityCode`: first 3 letters of `ServiceArea`. Missing area → missing.
+  - `ChangedPhone`: 1 if the phone is at least 1 month newer than the account, else 0. Missing phone age → missing (not a guess). Month length = 365.25 / 12 days.
+- **Evidence:** EDA Part C (C1 overlaps, C2 areas, C3 phone vs months in service).
+- **Alternatives rejected:** including the retention columns (leakage and feedback-loop risk); keeping lifestyle columns in from the start (inconsistent with A4); keeping redundant columns (unstable logistic regression); 730 raw areas (noise); dropping location (loses a real signal).
+- **Tests:** `tests/test_features.py` (14 tests).
+- **Revisit:** the "with personal + lifestyle data" comparison after the first model (A4). Retention columns if their timing is ever confirmed.
