@@ -87,6 +87,7 @@ All look like **monthly averages** (they have decimals).
 | `ReferralsMadeBySubscriber` | Number of new customers this customer referred | Number | 🔸 | |
 | `NewCellphoneUser` | Is the customer new to mobile phones? | Yes / No | 🔸 | Overlaps with the next column |
 | `NotNewCellphoneUser` | Has the customer used mobile phones before? | Yes / No | 🔸 | Both often "No", so together: new / not new / unknown |
+| `CellphoneUserStatus` | **Created by cleaning** (A7): the two columns above combined | New / NotNew / Unknown | ✅ | Replaces `NewCellphoneUser` and `NotNewCellphoneUser` after cleaning |
 | `CreditRating` | Customer's credit rating | Text | 🔸 | Ordered: 1-Highest to 7-Lowest |
 | `AdjustmentsToCreditRating` | Number of changes to the credit rating | Number | 🔸 | |
 

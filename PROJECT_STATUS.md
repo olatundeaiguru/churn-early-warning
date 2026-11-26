@@ -4,12 +4,12 @@ _Last updated: 2026-11-21_
 
 ## Current stage
 
-**Stage 3: Exploratory Data Analysis (analysis done, owner reviewing).**
-`notebooks/02_eda.ipynb` Parts A, B and C written and run on the training set.
+**Stage 4: Initial cleaning (complete).**
+Stage 3 (EDA) complete. Next stage: **Stage 5: Separate features (X) and target (y)** (not started).
 
 ## Next single step
 
-Owner reviews Part C and the 5 business insights. Then close Stage 3 and start Stage 4 (Cleaning).
+Start Stage 5: decide the feature set, including the open questions (retention columns A2, lifestyle columns, overlapping columns, city code).
 
 ## Problem summary
 
@@ -51,6 +51,7 @@ Owner reviews Part C and the 5 business insights. Then close Stage 3 and start S
 | A4 | Build the model **without** `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `MaritalStatus`, `Occupation` and `IncomeGroup` first. Keep them for a fairness check. Then build **with** them, compare on cross-validation (never the test set), and choose. `CreditRating` and `PrizmCode` stay in; `PrizmCode` gets a fairness check. | Decided |
 | A5 | Baselines: (1) random calling, (2) rule "call the 20% with the most `CustomerCareCalls`", (3) logistic regression. | Decided |
 | A6 | Split before EDA: 80/20, stratified on `Churn`, `random_state=42`. EDA and modelling use the training set only. | Done |
+| A7 | Rule-based cleaning (`src/churn/cleaning.py`), run as the first pipeline step: negatives → missing, `HandsetPrice` → number, combined `CellphoneUserStatus`, `AgeHH1`/`IncomeGroup` 0 → missing. | Done |
 
 ## Stage 2 findings (data inspection)
 
@@ -124,3 +125,4 @@ Source: `notebooks/02_eda.ipynb`. Full detail in the notebook's C4 and "EDA summ
   - Learning comments added to all code (to be cleaned up at the end of the project).
 - Stage 3 EDA: Parts A (data quality, leakage), B (churn by column, charts), C (overlaps, areas, insights).
 - `docs/data_dictionary.md`: all 58 columns (5 confirmed by sources, the rest inferred and marked).
+- Stage 4: `src/churn/cleaning.py` with 4 rules (decision A7) and 15 tests. 37 tests passing in total.

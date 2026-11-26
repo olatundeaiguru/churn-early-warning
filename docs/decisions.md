@@ -132,3 +132,33 @@ Each decision records: what we decided, why, the evidence, other options we cons
   - A time-based split. Better for real deployment, but **not possible**: the data has no dates.
 - **Limitation:** A random split cannot show how the model handles behaviour changing over time. The test score may be a little optimistic compared with real use on future customers.
 - **Revisit if:** the dataset changes, or a dataset with dates becomes available.
+
+---
+
+## A7: Rule-based cleaning
+
+- **Date:** 2026-11-26
+- **Stage:** 4 (Initial cleaning)
+- **Decision:** 4 fixed rules in `src/churn/cleaning.py` (`clean_data()`), run as the **first step of the model pipeline**. No cleaned copy of the data is saved.
+
+| Rule | What it does | Rows affected (train) |
+|---|---|---|
+| 1 | Negative `MonthlyRevenue`, `TotalRecurringCharge`, `CurrentEquipmentDays` → missing | 3 / 8 / 55 |
+| 2 | `HandsetPrice` text → number. "Unknown" → missing | 23,214 Unknown |
+| 3 | `NewCellphoneUser` + `NotNewCellphoneUser` → one column `CellphoneUserStatus` (New / NotNew / Unknown). Originals dropped | New 7,854 / NotNew 5,620 / Unknown 27,363 |
+| 4 | `AgeHH1 = 0` and `IncomeGroup = 0` → missing. `AgeHH2` left alone | 11,180 / 10,280 |
+
+- **Result:** 40,837 rows kept (none dropped). 58 → 57 columns.
+- **Why:**
+  - These rules **learn nothing** from the data, so they are safe to apply identically to train, test and new customers.
+  - Learned steps (filling gaps, encoding, scaling) stay in the pipeline, fitted on training data only (Stage 7).
+  - Running cleaning inside the pipeline means the Streamlit app cleans new customers **the same way automatically**, and there is no second copy of the data to keep in sync.
+- **Why each rule:**
+  - Rule 1: negative money or days are impossible. We do not know the true value, so "missing" is more honest than 0. Deleting rows would lose customers.
+  - Rule 2: keeps the price as a number (150 > 30). The "was missing" flag added in Stage 7 keeps the "Unknown" information (EDA: Unknown churns +1.2 points).
+  - Rule 3: EDA Part C showed the two columns are never both "Yes": really one 3-way column.
+  - Rule 4: nobody paying a phone bill is 0 years old. `AgeHH2 = 0` may mean "no second person", so it is not changed. Needed for the fairness check (A4).
+- **Safety:** contradictions (a customer both new and not new) and bad prices (e.g. "cheap") **fail loudly** instead of being guessed.
+- **Alternatives rejected:** negatives → 0 (a guess); deleting rows (loses customers); keeping `HandsetPrice` as 16 text categories (loses order); saving `train_clean.csv` (a second copy to keep in sync).
+- **Tests:** `tests/test_cleaning.py` (15 tests).
+- **Revisit if:** new data shows other impossible values, or the meaning of `AgeHH2 = 0` is confirmed.
