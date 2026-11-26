@@ -4,12 +4,12 @@ _Last updated: 2026-11-21_
 
 ## Current stage
 
-**Stage 3: Exploratory Data Analysis (in progress).**
-Setup done: test set held out (decision A6). EDA itself not started.
+**Stage 3: Exploratory Data Analysis (analysis done, owner reviewing).**
+`notebooks/02_eda.ipynb` Parts A, B and C written and run on the training set.
 
 ## Next single step
 
-Create `notebooks/02_eda.ipynb` and explore the **training set only** (`load_train_data()`).
+Owner reviews Part C and the 5 business insights. Then close Stage 3 and start Stage 4 (Cleaning).
 
 ## Problem summary
 
@@ -74,6 +74,25 @@ Source: `notebooks/01_data_inspection.ipynb`.
 - `CreditRating` is ordered (1-Highest to 7-Lowest).
 - `MadeCallToRetentionTeam` = Yes for 1,745 customers (see decision A2).
 
+## Stage 3 findings (EDA, training set)
+
+Source: `notebooks/02_eda.ipynb`. Full detail in the notebook's C4 and "EDA summary" cells.
+
+**Business insights (draft for the manager)**
+1. **1-year danger zone:** 11-12 months in service churn 42.5% vs 15.9% at 6-8 months. Same with or without a phone change (timing, likely contract end).
+2. **Long-standing customers on their original phone:** 19+ months, same phone 33.9% vs changed phone 25.7%. Non-web phones 37.2% vs 27.9%.
+3. **Low or falling usage:** lowest minutes 37.8% vs heaviest 25.0%. Biggest drop in minutes 34.3%. Missing usage data 46-57%.
+4. **Customer care calls are not a churn signal alone:** most calls 24.5% vs almost none 30.5%. Our rule baseline (A5) will probably do worse than random. Kept as decided.
+5. **Churn differs by city:** 22.0% (STL) to 41.7% (SLC) among cities with 100+ customers.
+
+**Data findings**
+- Missing usage data is a strong churn signal (Part A). "Unknown" values are weak signals (+1 to +1.5 points).
+- Retention columns: strong link (about 45% churn) but not near 100%. Timing still unconfirmed (A2, decide in Stage 5).
+- Honest ranking of real values (spread without "Missing"): `MonthsInService` 26.6, `CurrentEquipmentDays` 19.3, `MonthlyMinutes` 12.8, `PercChangeMinutes` 9.4, `CreditRating` 9.3, `HandsetWebCapable` 9.3.
+- Overlaps: `MadeCallToRetentionTeam` = `RetentionCalls` > 0 exactly. `DroppedBlockedCalls` = Dropped + Blocked in 88.9% of rows. `Handsets`/`HandsetModels` correlation 0.91. `NewCellphoneUser`/`NotNewCellphoneUser` = one 3-way column.
+- `ServiceArea`: 730 areas in train, only 112 with 100+ customers. 58 city codes (first 3 letters).
+- Proposed actions for Stages 4, 5 and 7 are listed in the notebook's "EDA summary" cell.
+
 ## Assumptions to keep in mind
 
 - The 31 to 60 day churn window comes from third-party copies of the original Teradata/Duke documentation. Our file has 51,047 rows; the documentation says 71,047. The gap is exactly 20,000, and the documentation says its validation sample has no churn label. So our file is very likely the labelled part. Strong guess, not confirmed.
@@ -103,3 +122,5 @@ Source: `notebooks/01_data_inspection.ipynb`.
   - Split run with `python -m churn.split` (decision A6).
   - Notebook 01 uses the shared loader.
   - Learning comments added to all code (to be cleaned up at the end of the project).
+- Stage 3 EDA: Parts A (data quality, leakage), B (churn by column, charts), C (overlaps, areas, insights).
+- `docs/data_dictionary.md`: all 58 columns (5 confirmed by sources, the rest inferred and marked).
