@@ -257,3 +257,43 @@ Each decision records: what we decided, why, the evidence, other options we cons
 - **Alternatives rejected:** "any improvement over 0.278" (a win could be luck); 10 folds (slower, little extra stability); class weights for logistic regression (a ranking measure is barely affected; the baseline should be plain).
 - **Tests:** `tests/test_evaluation.py` (14), `tests/test_baselines.py` (4).
 - **Revisit:** if the business changes the call budget (20%), re-run the baselines and the target.
+
+## A11: Shortlist LightGBM
+
+- **Date:** 2026-11-27
+- **Stage:** 9 (Train and compare candidates)
+- **Context:** compare 2 stronger models with the logistic regression baseline, using the same 5 folds, pipeline (A9) and measures (A10). Default settings plus `random_state=42`, no tuning yet (tuning is Stage 11).
+- **Evidence** (EXP-002, `reports/candidate_results.csv`):
+
+| Model | Recall at 20% | ROC-AUC | Train recall at 20% |
+|---|---|---|---|
+| Logistic regression | 0.278 ± 0.011 | 0.611 | 0.283 |
+| Random Forest | 0.314 ± 0.008 | 0.657 | 0.694 (train ROC-AUC 1.000) |
+| **LightGBM** | **0.332 ± 0.006** | **0.674** | 0.471 |
+
+- **Decision:** take **LightGBM** forward. It is best on all 4 measures, the most stable, and passes the A10 target (recall ≥ 0.31 and ROC-AUC ≥ 0.64) with a margin. It reaches about 19% more churners than logistic regression and about 1.7× random calling, for the same number of calls.
+- **Rejected:** Random Forest passes the target only just, and memorises the training data (training ROC-AUC 1.000). Logistic regression stays as the baseline only (no train/check gap, but too simple: underfitting).
+- **Risks:** LightGBM also has a train/check gap (0.47 vs 0.33): some overfitting, to address in Stage 11 tuning. ROC-AUC 0.67 is moderate: churn is hard to predict from this data.
+- **Code:** `src/churn/candidates.py` (`build_lightgbm_pipeline` holds the one shared LightGBM set-up), `src/churn/evaluation.py` (`cross_validate_models`, shared by Stages 8 and 9).
+- **Revisit:** if tuning cannot close the gap, or if another model type is justified later.
+
+## A12: Personal and lifestyle columns stay out (completes A4)
+
+- **Date:** 2026-11-27
+- **Stage:** 9
+- **Context:** A4 said: build without the 6 personal columns first, then compare with them, on cross-validation only, and let the owner choose. A8 added the 10 lifestyle columns to the same check.
+- **Rule set BEFORE looking:** keep a group only if it raises recall at 20% by **at least 0.02** (about 3× LightGBM's fold spread of 0.006). This is data minimisation: personal data must clearly earn its place.
+- **Evidence** (EXP-003, `reports/personal_check_results.csv`, same LightGBM and folds):
+
+| Version | Recall at 20% | ROC-AUC | Gain |
+|---|---|---|---|
+| Main features (35) | 0.332 ± 0.006 | 0.674 | — |
+| + personal (6) | 0.337 ± 0.009 | 0.678 | +0.005 |
+| + lifestyle (10) | 0.331 ± 0.006 | 0.675 | −0.001 |
+| + both (16) | 0.333 ± 0.005 | 0.677 | +0.001 |
+
+- **Decision (owner):** no group passes, so **personal and lifestyle columns stay out of the model**. The biggest gain (+0.005) is smaller than the fold-to-fold wobble.
+- **Why:** no real performance cost; less privacy and fairness risk; the app will not need to ask for age, income or lifestyle details.
+- **Still to do:** use the personal columns **for auditing only** (never as model inputs) in the fairness check: does the model work equally well across age and income groups? `PrizmCode` also gets this check (A4).
+- **Code:** `src/churn/features.py` (`EXTRA_FEATURE_GROUPS`), `src/churn/pipeline.py` (`extra_groups`, empty by default), `src/churn/personal_check.py`.
+- **Revisit:** if the model or feature set changes a lot (e.g. after tuning), the check is cheap to re-run.

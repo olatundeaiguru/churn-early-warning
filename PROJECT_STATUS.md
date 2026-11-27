@@ -1,24 +1,25 @@
 # Project Status: Churn Early-Warning System
 
-_Last updated: 2026-11-26_
+_Last updated: 2026-11-27_
 
 ## Current stage
 
-**Stage 8: Establish a baseline (complete).**
-Baselines run (EXP-001 in `docs/experiments.md`), success target set (A10). Branch: `feat/stage-8-baseline`.
-Next stage: **Stage 9: Train and compare candidates** (not started).
+**Stage 9: Train and compare candidates (complete).**
+EXP-002 and EXP-003 in `docs/experiments.md`; decisions A11 and A12. Branch: `feat/stage-9-candidates`.
+Next stage: **Stage 10: Evaluate the shortlisted model in depth** (not started).
 
-| Baseline | Recall at 20% | ROC-AUC |
+| Model (5-fold CV, training set) | Recall at 20% | ROC-AUC |
 |---|---|---|
 | Random calling | 0.197 | 0.500 |
-| Customer-care rule | 0.171 (worse than random) | 0.470 |
-| Logistic regression | **0.278 ± 0.011** | **0.611** |
+| Logistic regression (baseline) | 0.278 ± 0.011 | 0.611 |
+| Random Forest | 0.314 ± 0.008 | 0.657 |
+| **LightGBM (shortlisted, A11)** | **0.332 ± 0.006** | **0.674** |
+
+Personal and lifestyle columns add nothing beyond noise (best gain +0.005, rule needed +0.02), so they stay out (A12).
 
 ## Next single step
 
-Start Stage 9: compare Random Forest and LightGBM against logistic regression, with the same 5 folds and measures.
-
-**Success target (A10):** a stronger model must reach **recall at 20% ≥ 0.31 and ROC-AUC ≥ 0.64**.
+Start Stage 10: look deeper at LightGBM on cross-validation predictions (where it fails, which churners it misses, calibration), plus the fairness check using personal columns for auditing only.
 
 ## Problem summary
 
@@ -43,7 +44,7 @@ Start Stage 9: compare Random Forest and LightGBM against logistic regression, w
 
 - [ ] EDA notebook with 3 to 5 plain-English business insights
 - [ ] Reusable scikit-learn pipeline (missing values, encoding, scaling) with no leakage
-- [ ] Model comparison: logistic regression baseline plus at least 2 stronger models
+- [x] Model comparison: logistic regression baseline plus at least 2 stronger models (EXP-002)
 - [ ] Tuned final model, with a threshold that fits the 20% call budget
 - [ ] SHAP explanations: overall and for one customer
 - [ ] Business impact estimate (monthly revenue saved)
@@ -57,12 +58,15 @@ Start Stage 9: compare Random Forest and LightGBM against logistic regression, w
 | A1 | Use the `Churn` label as given: churn 31 to 60 days after the snapshot. | Decided |
 | A2 | `RetentionCalls`, `RetentionOffersAccepted` and `MadeCallToRetentionTeam` are possible leakage. Check them in EDA. If we cannot show they were known at snapshot time, leave them out. | Decided in A8: **excluded** |
 | A3 | Success rule: within the 20% call budget, the final model must catch clearly more churners than the logistic regression baseline and far more than random calling. The exact target number is set right after the baseline run, before looking at stronger models. | Done (A10): recall at 20% ≥ 0.31 and ROC-AUC ≥ 0.64 |
-| A4 | Build the model **without** `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `MaritalStatus`, `Occupation` and `IncomeGroup` first. Keep them for a fairness check. Then build **with** them, compare on cross-validation (never the test set), and choose. `CreditRating` and `PrizmCode` stay in; `PrizmCode` gets a fairness check. | Decided |
+| A4 | Build the model **without** `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `MaritalStatus`, `Occupation` and `IncomeGroup` first. Keep them for a fairness check. Then build **with** them, compare on cross-validation (never the test set), and choose. `CreditRating` and `PrizmCode` stay in; `PrizmCode` gets a fairness check. | Done (A12): personal and lifestyle columns **excluded** |
 | A5 | Baselines: (1) random calling, (2) rule "call the 20% with the most `CustomerCareCalls`", (3) logistic regression. | Decided |
 | A6 | Split before EDA: 80/20, stratified on `Churn`, `random_state=42`. EDA and modelling use the training set only. | Done |
 | A7 | Rule-based cleaning (`src/churn/cleaning.py`), run as the first pipeline step: negatives → missing, `HandsetPrice` → number, combined `CellphoneUserStatus`, `AgeHH1`/`IncomeGroup` 0 → missing. | Done |
 | A8 | Feature set: **35 features** (29 numeric, 5 categorical, 1 ordinal) in `src/churn/features.py`. Excluded: retention columns (leakage risk), 6 personal + 10 lifestyle columns (for the later comparison, A4), `DroppedBlockedCalls` and `HandsetModels` (redundant), `ServiceArea` (replaced by `CityCode`). New: `CityCode`, `ChangedPhone`. | Done |
 | A9 | Pipeline (`src/churn/pipeline.py`): clean → add features → median fill + "was missing" flags → one-hot (rare/unseen → "infrequent") → `CreditRating` ranks → scale only for logistic regression. 35 features → 93 columns. | Done |
+| A10 | Evaluation setup (recall/precision at 20%, ROC-AUC, PR-AUC, 5-fold CV) and success target: recall at 20% ≥ 0.31 and ROC-AUC ≥ 0.64. | Done |
+| A11 | Shortlist **LightGBM** (best on all measures, passes A10). Random Forest rejected (memorises). | Done |
+| A12 | Personal and lifestyle columns stay out (no gain ≥ 0.02). Personal columns used only to audit fairness. | Done |
 
 ## Stage 2 findings (data inspection)
 
@@ -141,3 +145,6 @@ Source: `notebooks/02_eda.ipynb`. Full detail in the notebook's C4 and "EDA summ
 - Stage 7: `src/churn/pipeline.py` (decision A9) and 15 tests. 66 tests passing in total. `encode_target()` added to `features.py`.
 - Branches: `feat/stage-4-cleaning` renamed to `feat/stage-4-5-cleaning-features` (Stage 5 was committed there). Stage 7 on `feat/stage-7-pipeline`.
 - `DAYS_PER_MONTH` changed from 30.4 to 365.25 / 12. 198 customers moved category in the EDA C3 table; conclusions unchanged, numbers updated.
+- Stage 8: `src/churn/evaluation.py` (call-budget measures), `src/churn/baselines.py`, EXP-001, decision A10. 84 tests passing.
+- Stage 9: `cross_validate_models` shared by all stages; `src/churn/candidates.py` (EXP-002, A11); optional feature groups in `features.py`/`pipeline.py` and `src/churn/personal_check.py` (EXP-003, A12); shared fake data in `tests/conftest.py`. 105 tests passing.
+- Working mode changed (CLAUDE.md section 11): the owner runs every model and the stage-end tests; I build agreed plans and report at stage end.
