@@ -4,9 +4,19 @@ Run from the project root: python -m pytest -v
 """
 
 import numpy as np
+import pandas as pd
 import pytest
+from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 
-from churn.evaluation import precision_at_budget, recall_at_budget, top_share_mask
+from churn.evaluation import (
+    SCORING,
+    cross_validate_models,
+    precision_at_budget,
+    recall_at_budget,
+    top_share_mask,
+)
 
 # 10 fake customers: the first 2 churned. Score = 9, 8, ..., 0 (perfect order).
 Y_TRUE = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -102,3 +112,57 @@ def test_random_scores_catch_about_the_call_share():
     recall = recall_at_budget(y_true, random_scores, TWENTY_PERCENT)
 
     assert recall == pytest.approx(TWENTY_PERCENT, abs=0.01)
+
+
+# --- cross_validate_models ---
+
+N_FAKE_CUSTOMERS = 200
+FAKE_CHURN_RATE = 0.3
+
+
+# 200 fake customers with 2 number columns and about 30% churn: enough churners
+# in every one of the 5 folds. Tiny models on fake data, so tests stay fast.
+@pytest.fixture
+def fake_xy() -> tuple[pd.DataFrame, pd.Series]:
+    """Fake features and target (1 = churned) for cross-validation tests."""
+    rng = np.random.default_rng(0)
+    x = pd.DataFrame(
+        {"usage": rng.random(N_FAKE_CUSTOMERS), "tenure": rng.random(N_FAKE_CUSTOMERS)}
+    )
+    y = pd.Series((rng.random(N_FAKE_CUSTOMERS) < FAKE_CHURN_RATE).astype(int))
+    return x, y
+
+
+@pytest.fixture
+def fake_models() -> dict[str, Pipeline]:
+    """Two tiny unfitted models, each wrapped in a pipeline like the real ones."""
+    return {
+        "dummy": Pipeline([("model", DummyClassifier(strategy="prior"))]),
+        "logistic": Pipeline([("model", LogisticRegression())]),
+    }
+
+
+def test_cv_gives_one_row_per_model(fake_xy, fake_models):
+    """The results table has one row per model, in the order given."""
+    results = cross_validate_models(fake_models, *fake_xy)
+    assert list(results.index) == ["dummy", "logistic"]
+
+
+def test_cv_reports_mean_and_std_for_every_measure(fake_xy, fake_models):
+    """Each measure gets a mean and a std column, and no training columns."""
+    results = cross_validate_models(fake_models, *fake_xy)
+    expected = [f"{m}_{stat}" for m in SCORING for stat in ("mean", "std")]
+    assert list(results.columns) == expected
+
+
+def test_cv_adds_training_scores_when_asked(fake_xy, fake_models):
+    """include_train_scores=True adds a train_..._mean column per measure."""
+    results = cross_validate_models(fake_models, *fake_xy, include_train_scores=True)
+    for measure in SCORING:
+        assert f"train_{measure}_mean" in results.columns
+
+
+def test_cv_without_models_raises(fake_xy):
+    """An empty model list is a mistake, so it fails loudly."""
+    with pytest.raises(ValueError, match="No models"):
+        cross_validate_models({}, *fake_xy)

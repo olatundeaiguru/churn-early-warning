@@ -5,12 +5,18 @@ share lands in the top-20% call list. Also: precision at the budget, ROC-AUC
 and PR-AUC. Decisions: see docs/decisions.md (A10).
 """
 
+import logging
 import math
 
 import numpy as np
+import pandas as pd
 from sklearn.metrics import make_scorer
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.pipeline import Pipeline
 
-from churn.config import CALL_BUDGET_SHARE, RANDOM_STATE
+from churn.config import CALL_BUDGET_SHARE, CV_FOLDS, RANDOM_STATE
+
+logger = logging.getLogger(__name__)
 
 
 # Pick the customers the team would call: the top share by risk score.
@@ -107,3 +113,62 @@ SCORING = {
     "roc_auc": "roc_auc",
     "pr_auc": "average_precision",
 }
+
+
+# Shared by every stage, so all models are measured in exactly the same way:
+# the same 5 folds (fixed seed), the same measures, the same summary.
+def cross_validate_models(
+    models: dict[str, Pipeline],
+    x_raw: pd.DataFrame,
+    y: pd.Series,
+    include_train_scores: bool = False,
+) -> pd.DataFrame:
+    """Cross-validate each model pipeline with the same folds and measures.
+
+    Args:
+        models: Unfitted model pipelines, by name.
+        x_raw: Raw training features (from split_raw_target).
+        y: Training target (1 = churned).
+        include_train_scores: Also report scores on the training folds. A big
+            gap between train and check scores means overfitting.
+
+    Returns:
+        One row per model: mean and standard deviation of each measure.
+
+    Raises:
+        ValueError: If no models are given.
+    """
+    if not models:
+        raise ValueError("No models to cross-validate.")
+    # Same folds for every model, each keeping the 28.8% churn rate.
+    folds = StratifiedKFold(n_splits=CV_FOLDS, shuffle=True, random_state=RANDOM_STATE)
+    rows = {}
+    for name, pipeline in models.items():
+        logger.info("Cross-validating %s ...", name)
+        scores = cross_validate(
+            pipeline,
+            x_raw,
+            y,
+            cv=folds,
+            scoring=SCORING,
+            return_train_score=include_train_scores,
+        )
+        rows[name] = _summarise_scores(scores, include_train_scores)
+    return pd.DataFrame(rows).T
+
+
+# Mean and spread (std) across the 5 folds, for each measure.
+# Check-fold columns keep their Stage 8 names (e.g. recall_at_20_mean);
+# training-fold columns get a "train_" prefix.
+def _summarise_scores(
+    scores: dict[str, np.ndarray], include_train_scores: bool
+) -> dict[str, float]:
+    summary = {}
+    for measure in SCORING:
+        fold_values = scores[f"test_{measure}"]
+        summary[f"{measure}_mean"] = round(fold_values.mean(), 4)
+        summary[f"{measure}_std"] = round(fold_values.std(), 4)
+        if include_train_scores:
+            train_values = scores[f"train_{measure}"]
+            summary[f"train_{measure}_mean"] = round(train_values.mean(), 4)
+    return summary

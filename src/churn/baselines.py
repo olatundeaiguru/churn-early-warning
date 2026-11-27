@@ -15,12 +15,11 @@ import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
 
-from churn.config import CV_FOLDS, RANDOM_STATE, REPORTS_DIR
+from churn.config import CV_FOLDS, REPORTS_DIR
 from churn.data import load_train_data
-from churn.evaluation import SCORING
+from churn.evaluation import cross_validate_models
 from churn.pipeline import build_model_pipeline, split_raw_target
 
 logger = logging.getLogger(__name__)
@@ -84,7 +83,8 @@ def build_baselines() -> dict[str, Pipeline]:
     }
 
 
-# Run 5-fold cross-validation for each baseline and summarise the results.
+# Run 5-fold cross-validation for each baseline, using the shared function in
+# evaluation.py so baselines and later models are measured the same way.
 def evaluate_baselines(x_raw: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
     """Cross-validate every baseline with the same folds and measures.
 
@@ -95,24 +95,7 @@ def evaluate_baselines(x_raw: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
     Returns:
         One row per baseline: mean and standard deviation of each measure.
     """
-    # Same folds for every baseline, each keeping the 28.8% churn rate.
-    folds = StratifiedKFold(n_splits=CV_FOLDS, shuffle=True, random_state=RANDOM_STATE)
-    rows = {}
-    for name, pipeline in build_baselines().items():
-        logger.info("Cross-validating %s ...", name)
-        scores = cross_validate(pipeline, x_raw, y, cv=folds, scoring=SCORING)
-        rows[name] = _summarise_scores(scores)
-    return pd.DataFrame(rows).T
-
-
-# Mean and spread (std) across the 5 folds, for each measure.
-def _summarise_scores(scores: dict[str, np.ndarray]) -> dict[str, float]:
-    summary = {}
-    for measure in SCORING:
-        fold_values = scores[f"test_{measure}"]
-        summary[f"{measure}_mean"] = round(fold_values.mean(), 4)
-        summary[f"{measure}_std"] = round(fold_values.std(), 4)
-    return summary
+    return cross_validate_models(build_baselines(), x_raw, y)
 
 
 # Load training data, evaluate, print and save the results table.
