@@ -1,0 +1,4 @@
+,recall_at_20_mean,recall_at_20_std,train_recall_at_20_mean,precision_at_20_mean,precision_at_20_std,train_precision_at_20_mean,roc_auc_mean,roc_auc_std,train_roc_auc_mean,pr_auc_mean,pr_auc_std,train_pr_auc_mean
+logistic_regression,0.2779,0.0112,0.2828,0.4004,0.0162,0.4076,0.6109,0.0096,0.6196,0.3774,0.0126,0.3849
+random_forest,0.3144,0.0077,0.694,0.4529,0.0112,1.0,0.6573,0.0088,1.0,0.4294,0.0088,1.0
+lightgbm,0.3321,0.0059,0.4706,0.4783,0.0085,0.6781,0.6736,0.0081,0.8077,0.4556,0.0114,0.6586

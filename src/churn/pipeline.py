@@ -9,6 +9,8 @@ pipeline is then applied unchanged to test data and new customers.
 Decisions: see docs/decisions.md (A9).
 """
 
+from collections.abc import Sequence
+
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
@@ -31,6 +33,7 @@ from churn.features import (
     ORDINAL_FEATURES,
     add_features,
     encode_target,
+    extra_feature_columns,
 )
 
 # Categories seen fewer times than this in training are grouped together
@@ -62,20 +65,32 @@ def split_raw_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
 
 # Build the preprocessing steps. scale_numeric=True for logistic regression,
 # False for tree models (they do not need scaling).
-def build_preprocessor(scale_numeric: bool) -> Pipeline:
+# extra_groups adds optional columns (e.g. "personal") for the A4 comparison;
+# by default the main 35 features are used, as decided in A8.
+def build_preprocessor(
+    scale_numeric: bool, extra_groups: Sequence[str] = ()
+) -> Pipeline:
     """Build the preprocessing pipeline (not yet fitted).
 
     Args:
         scale_numeric: Scale numbers to a similar range. Needed for
             logistic regression; not needed for tree models.
+        extra_groups: Optional extra feature groups from
+            churn.features.EXTRA_FEATURE_GROUPS. Empty = main features only.
 
     Returns:
         An unfitted Pipeline: clean -> add features -> encode columns.
+
+    Raises:
+        ValueError: If a group name in extra_groups is unknown.
     """
+    extra = extra_feature_columns(extra_groups)
+    numeric_columns = [*NUMERIC_FEATURES, *extra.numeric]
+    categorical_columns = [*CATEGORICAL_FEATURES, *extra.categorical]
     column_encoder = ColumnTransformer(
         [
-            ("numeric", _numeric_steps(scale_numeric), list(NUMERIC_FEATURES)),
-            ("categorical", _categorical_steps(), list(CATEGORICAL_FEATURES)),
+            ("numeric", _numeric_steps(scale_numeric), numeric_columns),
+            ("categorical", _categorical_steps(), categorical_columns),
             ("ordinal", _ordinal_steps(scale_numeric), list(ORDINAL_FEATURES)),
         ],
         # Any column not listed above (ID, excluded columns) is dropped here.
@@ -97,19 +112,21 @@ def build_preprocessor(scale_numeric: bool) -> Pipeline:
 
 
 # Full pipeline = preprocessing + model, fitted and saved as ONE object.
-def build_model_pipeline(model: BaseEstimator, scale_numeric: bool) -> Pipeline:
+def build_model_pipeline(
+    model: BaseEstimator, scale_numeric: bool, extra_groups: Sequence[str] = ()
+) -> Pipeline:
     """Combine the preprocessor and a model into one pipeline.
 
     Args:
         model: An unfitted scikit-learn compatible classifier.
         scale_numeric: Passed to build_preprocessor.
+        extra_groups: Passed to build_preprocessor (default: none).
 
     Returns:
         An unfitted Pipeline: preprocess -> model.
     """
-    return Pipeline(
-        [("preprocess", build_preprocessor(scale_numeric)), ("model", model)]
-    )
+    preprocessor = build_preprocessor(scale_numeric, extra_groups)
+    return Pipeline([("preprocess", preprocessor), ("model", model)])
 
 
 # Numbers: fill gaps with the TRAINING median and add a "was missing" flag

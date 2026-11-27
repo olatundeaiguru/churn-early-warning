@@ -14,9 +14,12 @@ from churn.features import (
     EXCLUDED_COLUMNS,
     LEAKAGE_RISK_COLUMNS,
     LIFESTYLE_COLUMNS,
+    LIFESTYLE_GROUP,
     MODEL_FEATURES,
     PERSONAL_COLUMNS,
+    PERSONAL_GROUP,
     add_features,
+    extra_feature_columns,
     split_features_target,
 )
 
@@ -150,3 +153,30 @@ def test_split_missing_feature_raises(model_ready_df: pd.DataFrame):
     """A missing model feature gives a clear error."""
     with pytest.raises(ValueError, match="missing columns"):
         split_features_target(model_ready_df.drop(columns=CITY_CODE_COLUMN))
+
+
+# --- Optional extra feature groups (A4 comparison) ---
+
+
+def test_personal_group_covers_exactly_the_personal_columns():
+    """The personal group = the 6 personal columns, none lost or added."""
+    group = extra_feature_columns([PERSONAL_GROUP])
+    assert set(group.numeric + group.categorical) == set(PERSONAL_COLUMNS)
+
+
+def test_lifestyle_group_covers_exactly_the_lifestyle_columns():
+    """The lifestyle group = the 10 lifestyle columns, all categorical."""
+    group = extra_feature_columns([LIFESTYLE_GROUP])
+    assert group.numeric == ()
+    assert set(group.categorical) == set(LIFESTYLE_COLUMNS)
+
+
+def test_no_groups_means_no_extra_columns():
+    """The default (no groups) adds nothing: the main model is unchanged."""
+    assert extra_feature_columns([]) == ((), ())
+
+
+def test_unknown_group_raises():
+    """A typo in a group name fails loudly instead of being ignored."""
+    with pytest.raises(ValueError, match="Unknown feature groups"):
+        extra_feature_columns(["persnal"])

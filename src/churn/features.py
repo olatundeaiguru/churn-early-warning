@@ -5,6 +5,9 @@ reason (decision A8). New features are built with fixed rules only, so this
 step is safe to apply identically to train, test and new customers.
 """
 
+from collections.abc import Sequence
+from typing import NamedTuple
+
 import pandas as pd
 
 from churn.config import ID_COLUMN, POSITIVE_LABEL, TARGET_COLUMN
@@ -140,6 +143,57 @@ EXCLUDED_COLUMNS = (
     *REDUNDANT_COLUMNS,
     SERVICE_AREA_COLUMN,
 )
+
+# ---------------------------------------------------------------------------
+# Optional extra feature groups (decision A4 comparison, Stage 9)
+# ---------------------------------------------------------------------------
+# NOT in the main model. Added only when asked, to test whether they help.
+
+PERSONAL_GROUP = "personal"
+LIFESTYLE_GROUP = "lifestyle"
+
+
+class FeatureGroup(NamedTuple):
+    """Extra columns, split by how the pipeline treats them."""
+
+    numeric: tuple[str, ...]
+    categorical: tuple[str, ...]
+
+
+EXTRA_FEATURE_GROUPS = {
+    PERSONAL_GROUP: FeatureGroup(
+        numeric=("AgeHH1", "AgeHH2", "IncomeGroup"),
+        categorical=("ChildrenInHH", "MaritalStatus", "Occupation"),
+    ),
+    # All 10 lifestyle columns are Yes/No or Known/Unknown text.
+    LIFESTYLE_GROUP: FeatureGroup(numeric=(), categorical=LIFESTYLE_COLUMNS),
+}
+
+
+# Collect the extra columns for the chosen groups, e.g. ("personal",).
+def extra_feature_columns(groups: Sequence[str]) -> FeatureGroup:
+    """Return the extra numeric and categorical columns for the given groups.
+
+    Args:
+        groups: Names from EXTRA_FEATURE_GROUPS. Empty = no extra columns.
+
+    Returns:
+        All extra numeric columns and all extra categorical columns.
+
+    Raises:
+        ValueError: If a group name is unknown.
+    """
+    unknown_groups = [group for group in groups if group not in EXTRA_FEATURE_GROUPS]
+    if unknown_groups:
+        raise ValueError(
+            f"Unknown feature groups: {unknown_groups}. "
+            f"Choose from {list(EXTRA_FEATURE_GROUPS)}."
+        )
+    chosen = [EXTRA_FEATURE_GROUPS[group] for group in groups]
+    return FeatureGroup(
+        numeric=tuple(c for group in chosen for c in group.numeric),
+        categorical=tuple(c for group in chosen for c in group.categorical),
+    )
 
 
 # Build the 2 new features from columns the customer data already has.
