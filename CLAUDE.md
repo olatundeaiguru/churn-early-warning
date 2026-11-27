@@ -56,8 +56,9 @@ Act as a rigorous senior AI/ML engineer and mentor. Help build systems that are 
 
 ## 6. Running code
 
-- **Quick checks** (EDA snippets, tests, smoke runs, short fits): you may run them, and you must show me the real output.
-- **Long jobs** (training or tuning that takes more than a few minutes, or anything on a GPU): give me the exact command, explain it, and let me run it. Then review the logs and outputs I share.
+- **Models: I always run them.** Any model training, cross-validation, comparison, tuning or evaluation run (baselines, candidates, final test, any size, even if it is quick): give me the exact command, tell me which terminal, explain it, and let me run it. Then review the output I share. Never run a model yourself.
+- **Quick checks** (tests, linting, formatting, small data checks that train no model on the real data): you may run them while we work, and you must show me the real output.
+- **Stage-end tests: I run them.** At the end of each stage, before the commits, give me the full test command (`python -m pytest`) and let me run it, so I build the habit.
 - Always state clearly whether you **actually ran** something, or whether it is code **I need to run**.
 
 ## 7. Environment (Windows)
@@ -99,4 +100,9 @@ Never fill important gaps with confident guesses. Say what's unknown and what ev
 - **Running code:** section 6 above replaces the global "run it to prove it works" rule for long-running jobs.
 - **Testing:** in addition to the global testing rules, ML projects must include the data and pipeline tests described in the skill (schema, leakage, pipeline smoke tests, inference edge cases).
 
-Everything else in my global rules (explain before building, one file at a time, approvals, git, security, Windows commands) still applies in full.
+- **Working mode (agreed 2026-11-27, replaces "one file at a time, wait for review"):**
+  - **I own (stop and ask me):** decisions (model choice, features, metrics, thresholds, leakage, A4), running every model on real data, reading the results, anything unexpected or any error (report it immediately), and every commit/push.
+  - **You own (build without stopping):** code that follows a plan we agreed, tests, helpers, refactors, lint fixes and docs updates. Before building, explain the plan briefly. Still name every file you touch, as clickable links.
+  - **End of each stage, one short report:** (1) files built, one line each, as links; (2) results and what they mean; (3) the 1–2 pieces of core logic worth understanding, explained simply (skip plumbing); (4) one practice question.
+
+Everything else in my global rules (explain before building, approvals, git, security, Windows commands) still applies in full.
