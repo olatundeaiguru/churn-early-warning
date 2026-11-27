@@ -28,3 +28,11 @@ NEGATIVE_LABEL = "No"  # the customer stayed
 TEST_SIZE = 0.2
 # A fixed seed, so the random split is exactly the same every time it runs.
 RANDOM_STATE = 42
+
+# --- Evaluation settings ---
+# The retention team can call about 20% of customers a month (from the brief).
+CALL_BUDGET_SHARE = 0.2
+# Cross-validation: split the training set into 5 parts, each used once for checking.
+CV_FOLDS = 5
+# Where result tables are saved.
+REPORTS_DIR = PROJECT_ROOT / "reports"
