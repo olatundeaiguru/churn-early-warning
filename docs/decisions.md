@@ -229,3 +229,31 @@ Each decision records: what we decided, why, the evidence, other options we cons
 - **Deferred:** capping extreme values (e.g. `UniqueSubs` = 196 in the test set). Revisit if logistic regression struggles in Stage 8.
 - **Tests:** `tests/test_pipeline.py` (15 tests), incl. "gaps filled with the TRAINING median", "transforming new data does not re-learn", "unseen city does not crash", "excluded columns never come out".
 - **Revisit if:** the baseline shows problems with extreme values, or a model needs a different encoding.
+
+---
+
+## A10: Evaluation setup, baseline results and the success target
+
+- **Date:** 2026-11-26
+- **Stage:** 8 (Baseline)
+- **Evaluation setup** (`src/churn/evaluation.py`, `src/churn/config.py`):
+  - **Main measure:** recall at 20% = share of all churners inside the top-20% call list (A3).
+  - **Also reported:** precision at 20% (share of calls that reach a churner), ROC-AUC (asked for in the brief), PR-AUC (suits imbalanced data).
+  - **Call list size:** 20% of customers, rounded up. **Ties** in the score are broken randomly with a fixed seed (so a score with many ties, like the care-call rule, is neither helped nor hurt by row order).
+  - **Validation:** 5-fold stratified cross-validation on the training set, `random_state=42`, the same folds for every model. Results reported as mean ± standard deviation across folds.
+- **Baselines** (`src/churn/baselines.py`, results in EXP-001):
+
+| Model | Recall at 20% | ROC-AUC |
+|---|---|---|
+| Random calling | 0.197 ± 0.003 | 0.500 |
+| Customer-care rule | 0.171 ± 0.004 | 0.470 |
+| Logistic regression | **0.278 ± 0.011** | **0.611** |
+
+- **Success target (completes A3), set BEFORE looking at any stronger model:**
+  - A stronger model must reach **recall at 20% ≥ 0.31** (logistic regression + ~3 points, about 3× its fold-to-fold spread of 0.011, so the gain is very unlikely to be luck)
+  - **and ROC-AUC ≥ 0.64**.
+- **Why this target:** a smaller gain could come from which customers happen to land in which fold. Setting it now stops us from moving the goalposts after seeing results.
+- **Other changes:** the cleaning step's row-count messages moved from INFO to DEBUG logging, because they repeated on every pipeline run during cross-validation.
+- **Alternatives rejected:** "any improvement over 0.278" (a win could be luck); 10 folds (slower, little extra stability); class weights for logistic regression (a ranking measure is barely affected; the baseline should be plain).
+- **Tests:** `tests/test_evaluation.py` (14), `tests/test_baselines.py` (4).
+- **Revisit:** if the business changes the call budget (20%), re-run the baselines and the target.

@@ -4,12 +4,21 @@ _Last updated: 2026-11-26_
 
 ## Current stage
 
-**Stage 7: Build preprocessing (complete).**
-Stage 6 (split) was done early (A6). Next stage: **Stage 8: Establish a baseline** (not started).
+**Stage 8: Establish a baseline (complete).**
+Baselines run (EXP-001 in `docs/experiments.md`), success target set (A10). Branch: `feat/stage-8-baseline`.
+Next stage: **Stage 9: Train and compare candidates** (not started).
+
+| Baseline | Recall at 20% | ROC-AUC |
+|---|---|---|
+| Random calling | 0.197 | 0.500 |
+| Customer-care rule | 0.171 (worse than random) | 0.470 |
+| Logistic regression | **0.278 ± 0.011** | **0.611** |
 
 ## Next single step
 
-Start Stage 8: run the 3 baselines (random calling, customer-care rule, logistic regression) with cross-validation on the training set, then set the success target number (A3).
+Start Stage 9: compare Random Forest and LightGBM against logistic regression, with the same 5 folds and measures.
+
+**Success target (A10):** a stronger model must reach **recall at 20% ≥ 0.31 and ROC-AUC ≥ 0.64**.
 
 ## Problem summary
 
@@ -47,7 +56,7 @@ Start Stage 8: run the 3 baselines (random calling, customer-care rule, logistic
 |---|---|---|
 | A1 | Use the `Churn` label as given: churn 31 to 60 days after the snapshot. | Decided |
 | A2 | `RetentionCalls`, `RetentionOffersAccepted` and `MadeCallToRetentionTeam` are possible leakage. Check them in EDA. If we cannot show they were known at snapshot time, leave them out. | Decided in A8: **excluded** |
-| A3 | Success rule: within the 20% call budget, the final model must catch clearly more churners than the logistic regression baseline and far more than random calling. The exact target number is set right after the baseline run, before looking at stronger models. | Rule decided, number pending |
+| A3 | Success rule: within the 20% call budget, the final model must catch clearly more churners than the logistic regression baseline and far more than random calling. The exact target number is set right after the baseline run, before looking at stronger models. | Done (A10): recall at 20% ≥ 0.31 and ROC-AUC ≥ 0.64 |
 | A4 | Build the model **without** `AgeHH1`, `AgeHH2`, `ChildrenInHH`, `MaritalStatus`, `Occupation` and `IncomeGroup` first. Keep them for a fairness check. Then build **with** them, compare on cross-validation (never the test set), and choose. `CreditRating` and `PrizmCode` stay in; `PrizmCode` gets a fairness check. | Decided |
 | A5 | Baselines: (1) random calling, (2) rule "call the 20% with the most `CustomerCareCalls`", (3) logistic regression. | Decided |
 | A6 | Split before EDA: 80/20, stratified on `Churn`, `random_state=42`. EDA and modelling use the training set only. | Done |
