@@ -86,7 +86,7 @@ def _check_required_columns(df: pd.DataFrame) -> None:
 def _set_negatives_to_missing(df: pd.DataFrame) -> pd.DataFrame:
     for column in NON_NEGATIVE_COLUMNS:
         is_negative = df[column] < 0
-        logger.info(
+        logger.debug(
             "Rule 1: %s negatives set to missing: %d", column, is_negative.sum()
         )
         # .mask replaces values where the condition is True (here: with NaN).
@@ -99,7 +99,7 @@ def _set_negatives_to_missing(df: pd.DataFrame) -> pd.DataFrame:
 def _convert_handset_price_to_number(df: pd.DataFrame) -> pd.DataFrame:
     prices = df[HANDSET_PRICE_COLUMN]
     is_unknown = prices.eq(UNKNOWN_LABEL)
-    logger.info("Rule 2: HandsetPrice 'Unknown' set to missing: %d", is_unknown.sum())
+    logger.debug("Rule 2: HandsetPrice 'Unknown' set to missing: %d", is_unknown.sum())
 
     # .where keeps values where the condition is True, the rest become NaN.
     known_prices = prices.where(~is_unknown)
@@ -131,7 +131,7 @@ def _combine_cellphone_user_columns(df: pd.DataFrame) -> pd.DataFrame:
     df[CELLPHONE_STATUS_COLUMN] = np.select(
         [is_new, is_not_new], [STATUS_NEW, STATUS_NOT_NEW], default=STATUS_UNKNOWN
     )
-    logger.info(
+    logger.debug(
         "Rule 3: %s counts: %s",
         CELLPHONE_STATUS_COLUMN,
         df[CELLPHONE_STATUS_COLUMN].value_counts().to_dict(),
@@ -143,6 +143,6 @@ def _combine_cellphone_user_columns(df: pd.DataFrame) -> pd.DataFrame:
 def _set_zero_to_missing(df: pd.DataFrame) -> pd.DataFrame:
     for column in ZERO_MEANS_UNKNOWN_COLUMNS:
         is_zero = df[column].eq(0)
-        logger.info("Rule 4: %s zeros set to missing: %d", column, is_zero.sum())
+        logger.debug("Rule 4: %s zeros set to missing: %d", column, is_zero.sum())
         df[column] = df[column].mask(is_zero)
     return df
